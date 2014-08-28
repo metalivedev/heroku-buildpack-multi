@@ -12,6 +12,8 @@ function indent() {
 
 unset GIT_DIR
 
+echo "=====> Running buildpack-multi"
+
 for BUILDPACK in $(cat $1/.buildpacks); do
   dir=$(mktemp -t buildpackXXXXX)
   rm -rf $dir
@@ -33,18 +35,23 @@ for BUILDPACK in $(cat $1/.buildpacks); do
       git clone $url $dir >/dev/null 2>&1
     fi
     cd $dir
+    echo "=====> Download complete"
 
     if [ "$branch" != "" ]; then
+      echo "=====> Checking out branch $branch"
       git checkout $branch >/dev/null 2>&1
+      echo "=====> $branch checked-out"
     fi
 
     # we'll get errors later if these are needed and don't exist
+    echo "=====> chmodding"
     chmod -f +x $dir/bin/{detect,compile,release} || true
 
+    echo "=====> testing framework"
     framework=$($dir/bin/detect $1)
 
     if [ $? == 0 ]; then
-      echo "=====> Detected Framework: $framework"
+      echo "=====> Detected Framework: $framework. Compiling"
       $dir/bin/compile $1 $2 $3
 
       if [ $? != 0 ]; then
@@ -52,6 +59,7 @@ for BUILDPACK in $(cat $1/.buildpacks); do
       fi
 
       if [ -x $dir/bin/release ]; then
+	echo "=====> Releasing $1"
         $dir/bin/release $1 > $1/last_pack_release.out
       fi
     fi
